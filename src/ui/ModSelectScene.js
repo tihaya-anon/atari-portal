@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT, COLORS } from '../config.js';
 import { GameManager } from '../core/GameManager.js';
+import { DemoDirector } from '../core/DemoDirector.js';
 import SFX from '../core/SFXManager.js';
 import NeonGlow from '../vfx/NeonGlow.js';
 import AudioBackground from '../vfx/AudioBackground.js';
@@ -65,6 +66,14 @@ export class ModSelectScene extends Phaser.Scene {
 
       this.createModCard(cx, cy, cardWidth, cardHeight, mod);
     });
+
+    if (DemoDirector.autoSelectMod && choices.length > 0) {
+      this.time.delayedCall(DemoDirector.modSelectDelayMs, () => {
+        if (!this.scene.isActive('ModSelectScene')) return;
+        const preferred = choices.find(mod => mod.category === 'offensive' || mod.category === 'chaos') || choices[0];
+        this.selectMod(preferred);
+      });
+    }
 
     const skipBtn = this.add.text(GAME_WIDTH / 2, 480, '> SKIP', {
       fontSize: '14px', fontFamily: 'monospace', color: '#555577',

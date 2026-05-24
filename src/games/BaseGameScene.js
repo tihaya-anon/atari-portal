@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT, COLORS, HACK_CONFIG, AUDIO_REACTIVE as AR, CYBER_GRID } from '../config.js';
 import { GameManager } from '../core/GameManager.js';
+import { DemoDirector } from '../core/DemoDirector.js';
 import { PortalSystem } from '../core/PortalSystem.js';
 import { ScoreManager } from '../core/ScoreManager.js';
 import { GlitchSystem } from '../core/GlitchSystem.js';
@@ -77,6 +78,11 @@ export class BaseGameScene extends Phaser.Scene {
     this.events.on('score-popup', this._showScorePopup, this);
 
     this.events.once('shutdown', this.shutdown, this);
+
+    if (DemoDirector.enabled) {
+      DemoDirector.syncIndex(this.sceneKey);
+      this._startDemoTimer();
+    }
   }
 
   drawGameGrid() {
@@ -460,6 +466,11 @@ export class BaseGameScene extends Phaser.Scene {
   onPlayerDeath() {
     SFX.death();
     this.shakeCamera(0.012, 250);
+    if (DemoDirector.infiniteLives) {
+      GameManager.state.lives = Math.max(GameManager.state.lives, 99);
+      this.events.emit('lives-changed', GameManager.state.lives);
+      return true;
+    }
     const alive = GameManager.loseLife();
     this.events.emit('lives-changed', GameManager.state.lives);
     if (!alive) {
@@ -485,11 +496,26 @@ export class BaseGameScene extends Phaser.Scene {
   }
 
   _cleanupBeforeTransition() {
+    if (this._demoTimer) {
+      this._demoTimer.remove(false);
+      this._demoTimer = null;
+    }
     try {
       GameManager.mutationSystem.cleanupScene(this);
     } catch (_) { /* safe */ }
     try { this.scene.sleep('HUDScene'); } catch (_) {}
     try { this.scene.sleep('CRTOverlay'); } catch (_) {}
+  }
+
+  _startDemoTimer() {
+    if (this._demoTimer) {
+      this._demoTimer.remove(false);
+    }
+    this._demoTimer = this.time.delayedCall(DemoDirector.sceneDurationMs, () => {
+      if (this.scene.isActive(this.sceneKey) && !this._ending) {
+        this.skipToNextGame();
+      }
+    });
   }
 
   _showCombo(count, worldX, worldY) {

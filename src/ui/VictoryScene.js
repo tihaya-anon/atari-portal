@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT, COLORS } from '../config.js';
 import { GameManager } from '../core/GameManager.js';
+import { DemoDirector } from '../core/DemoDirector.js';
 import SFX from '../core/SFXManager.js';
 import BGM from '../core/AudioManager.js';
 import NeonGlow from '../vfx/NeonGlow.js';
@@ -69,5 +70,14 @@ export class VictoryScene extends Phaser.Scene {
       this.scene.stop('CRTOverlay');
       this.scene.start('MenuScene');
     });
+
+    if (DemoDirector.autoRestart) {
+      this.time.delayedCall(DemoDirector.victoryDelayMs, () => {
+        if (!this.scene.isActive('VictoryScene')) return;
+        this.scene.stop('HUDScene');
+        this.scene.stop('CRTOverlay');
+        this.scene.start('MenuScene');
+      });
+    }
   }
 }

@@ -1,4 +1,5 @@
 import { GAME_ORDER, DIFFICULTY, COIN_CONFIG, SPEED_BOOST, HACK_CONFIG, COMBO_CONFIG } from '../config.js';
+import { DemoDirector } from './DemoDirector.js';
 import { MutationSystem } from './MutationSystem.js';
 import { ModSystem } from './ModSystem.js';
 import { AchievementSystem } from './AchievementSystem.js';
@@ -192,7 +193,11 @@ class GameManagerSingleton {
     this.addCoins(COIN_CONFIG.PER_PORTAL);
 
     let nextSceneKey = null;
-    if (this.state.mode === 'story') {
+    if (DemoDirector.enabled) {
+      nextSceneKey = DemoDirector.getNextSceneKey();
+      DemoDirector.advance();
+      this.state.difficulty += DIFFICULTY.INCREMENT * 0.35;
+    } else if (this.state.mode === 'story') {
       nextSceneKey = GAME_ORDER[this.state.currentGameIndex + 1] || GAME_ORDER[GAME_ORDER.length - 1];
       this.state.difficulty += DIFFICULTY.INCREMENT;
     } else {
@@ -203,7 +208,7 @@ class GameManagerSingleton {
       this.state.difficulty += DIFFICULTY.INCREMENT * 0.5;
     }
 
-    if (this.cheats.nextSceneKey && GAME_ORDER.includes(this.cheats.nextSceneKey)) {
+    if (!DemoDirector.enabled && this.cheats.nextSceneKey && GAME_ORDER.includes(this.cheats.nextSceneKey)) {
       nextSceneKey = this.cheats.nextSceneKey;
       this.cheats.nextSceneKey = null;
     }
@@ -212,7 +217,7 @@ class GameManagerSingleton {
 
     this.state.portalTokens++;
 
-    if (this.cheats.nextMutationId) {
+    if (!DemoDirector.enabled && this.cheats.nextMutationId) {
       const forcedMutation = this.mutationSystem.setMutationById(this.cheats.nextMutationId);
       this.cheats.nextMutationId = null;
       if (!forcedMutation) this.mutationSystem.rollMutation();

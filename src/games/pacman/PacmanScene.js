@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { BaseGameScene } from '../BaseGameScene.js';
 import { GAME_WIDTH, GAME_HEIGHT, COLORS } from '../../config.js';
 import { GameManager } from '../../core/GameManager.js';
+import { DemoDirector } from '../../core/DemoDirector.js';
 import SFX from '../../core/SFXManager.js';
 import TrailSystem from '../../vfx/TrailSystem.js';
 import DebrisSystem from '../../vfx/DebrisSystem.js';
@@ -318,6 +319,9 @@ export class PacmanScene extends BaseGameScene {
     super.update(time, delta);
     if (this.gameOver) return;
 
+    if (DemoDirector.enabled) {
+      this.runDemoAI();
+    }
     this.handleInput();
     this.movePacman(delta);
     this.moveGhosts(delta);
@@ -365,6 +369,73 @@ export class PacmanScene extends BaseGameScene {
     if (newDir) {
       this.pacman.nextDirection = newDir;
     }
+  }
+
+  runDemoAI() {
+    const pac = this.pacman;
+    if (!pac || pac.moving) return;
+
+    const options = this.getAvailableDirections(pac.gridCol, pac.gridRow, pac.direction);
+    if (options.length === 0) return;
+
+    let target = null;
+    if (this.portalPellet) {
+      target = { col: this.portalPellet.gridCol, row: this.portalPellet.gridRow };
+    } else {
+      target = this.findNearestTargetCell(pac.gridCol, pac.gridRow);
+    }
+
+    let bestDir = options[0];
+    let bestScore = Infinity;
+
+    for (const dir of options) {
+      const nextCol = pac.gridCol + dir.x;
+      const nextRow = pac.gridRow + dir.y;
+      let score = 0;
+
+      if (target) {
+        score += Math.abs(target.col - nextCol) + Math.abs(target.row - nextRow);
+      }
+
+      for (const ghost of this.ghosts || []) {
+        if (!ghost || ghost.eaten || ghost.vulnerable) continue;
+        const dist = Math.abs(ghost.gridCol - nextCol) + Math.abs(ghost.gridRow - nextRow);
+        if (dist <= 1) score += 100;
+        else if (dist <= 2) score += 12;
+      }
+
+      if (score < bestScore) {
+        bestScore = score;
+        bestDir = dir;
+      }
+    }
+
+    pac.nextDirection = bestDir;
+  }
+
+  findNearestTargetCell(fromCol, fromRow) {
+    let best = null;
+    let bestDist = Infinity;
+
+    this.dots?.getChildren?.().forEach((dot) => {
+      if (!dot?.active) return;
+      const dist = Math.abs(dot.gridCol - fromCol) + Math.abs(dot.gridRow - fromRow);
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = { col: dot.gridCol, row: dot.gridRow };
+      }
+    });
+
+    this.powerPellets?.getChildren?.().forEach((pp) => {
+      if (!pp?.active) return;
+      const dist = Math.abs(pp.gridCol - fromCol) + Math.abs(pp.gridRow - fromRow) - 1.5;
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = { col: pp.gridCol, row: pp.gridRow };
+      }
+    });
+
+    return best;
   }
 
   movePacman(delta) {

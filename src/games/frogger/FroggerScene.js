@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { BaseGameScene } from '../BaseGameScene.js';
 import { GAME_WIDTH, GAME_HEIGHT, COLORS } from '../../config.js';
 import { GameManager } from '../../core/GameManager.js';
+import { DemoDirector } from '../../core/DemoDirector.js';
 import SFX from '../../core/SFXManager.js';
 import GlitchEffect from '../../vfx/GlitchEffect.js';
 import ArcadeFX from '../../vfx/ArcadeFX.js';
@@ -251,12 +252,16 @@ export class FroggerScene extends BaseGameScene {
     let dy = 0;
     const { JustDown } = Phaser.Input.Keyboard;
 
-    const invX = this.horizontalControlInverted;
-    const invY = this.verticalControlInverted;
-    if (JustDown(this.cursors.up) || JustDown(this.keyW)) dy = invY ? 1 : -1;
-    else if (JustDown(this.cursors.down) || JustDown(this.keyS)) dy = invY ? -1 : 1;
-    else if (JustDown(this.cursors.left) || JustDown(this.keyA)) dx = invX ? 1 : -1;
-    else if (JustDown(this.cursors.right) || JustDown(this.keyD)) dx = invX ? -1 : 1;
+    if (DemoDirector.enabled) {
+      ({ dx, dy } = this.getDemoHop());
+    } else {
+      const invX = this.horizontalControlInverted;
+      const invY = this.verticalControlInverted;
+      if (JustDown(this.cursors.up) || JustDown(this.keyW)) dy = invY ? 1 : -1;
+      else if (JustDown(this.cursors.down) || JustDown(this.keyS)) dy = invY ? -1 : 1;
+      else if (JustDown(this.cursors.left) || JustDown(this.keyA)) dx = invX ? 1 : -1;
+      else if (JustDown(this.cursors.right) || JustDown(this.keyD)) dx = invX ? -1 : 1;
+    }
 
     if (dx === 0 && dy === 0) return;
 
@@ -290,6 +295,37 @@ export class FroggerScene extends BaseGameScene {
     this.shakeCamera(dy !== 0 ? 0.0014 : 0.001, 60);
 
     if (this.frogRow === 0) this.checkLilyPad();
+  }
+
+  getDemoHop() {
+    if (this.portal?.portalActive) {
+      const portalX = this.portal.sprite?.x ?? GAME_WIDTH / 2;
+      if (Math.abs(portalX - this.frog.x) > HOP_X * 0.45) {
+        return { dx: portalX > this.frog.x ? 1 : -1, dy: 0 };
+      }
+      return { dx: 0, dy: this.frogRow > 0 ? -1 : 0 };
+    }
+
+    if (this.frogRow >= 7 && this.frogRow <= 11) {
+      const threat = this.cars.some(car => Math.abs(car.y - this.frog.y) < LANE_H * 0.5 && Math.abs(car.x - this.frog.x) < 70);
+      if (threat) {
+        return { dx: this.frog.x < GAME_WIDTH / 2 ? -1 : 1, dy: 0 };
+      }
+      return { dx: 0, dy: -1 };
+    }
+
+    if (this.frogRow >= 1 && this.frogRow <= 5) {
+      const log = this.findLog();
+      if (!log) {
+        return { dx: this.frog.x < GAME_WIDTH / 2 ? -1 : 1, dy: 0 };
+      }
+      if (Math.abs(log.x - this.frog.x) > 24) {
+        return { dx: log.x > this.frog.x ? 1 : -1, dy: 0 };
+      }
+      return { dx: 0, dy: -1 };
+    }
+
+    return { dx: 0, dy: -1 };
   }
 
   checkLilyPad() {

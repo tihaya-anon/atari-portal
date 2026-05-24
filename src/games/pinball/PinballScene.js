@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { BaseGameScene } from '../BaseGameScene.js';
 import { GAME_WIDTH, GAME_HEIGHT, COLORS } from '../../config.js';
+import { DemoDirector } from '../../core/DemoDirector.js';
 import SFX from '../../core/SFXManager.js';
 import AudioReactive from '../../core/AudioReactiveSystem.js';
 import CyberSceneFX from '../../vfx/CyberSceneFX.js';
@@ -198,8 +199,9 @@ export class PinballScene extends BaseGameScene {
     this.wormholeR.rotation += 0.05;
 
     const invX = this.horizontalControlInverted;
-    const isLeftDown = this.keyA.isDown || this.cursors.left.isDown;
-    const isRightDown = this.keyD.isDown || this.cursors.right.isDown;
+    const demoFlips = DemoDirector.enabled ? this.getDemoFlipperState(time) : { left: false, right: false, plunge: false };
+    const isLeftDown = demoFlips.left || this.keyA.isDown || this.cursors.left.isDown;
+    const isRightDown = demoFlips.right || this.keyD.isDown || this.cursors.right.isDown;
 
     // 🌟 控制 4 把拨杆的角度：左侧一起动，右侧一起动
     this.leftFlipper.setAngle((!invX && isLeftDown) || (invX && isRightDown) ? -30 : 20);
@@ -208,10 +210,10 @@ export class PinballScene extends BaseGameScene {
     this.rightFlipper.setAngle((!invX && isRightDown) || (invX && isLeftDown) ? 30 : -20);
     this.upperRightFlipper.setAngle((!invX && isRightDown) || (invX && isLeftDown) ? 30 : -20);
 
-    if (this.keySpace.isDown) {
+    if (demoFlips.plunge || this.keySpace.isDown) {
       this.plungeForce = Phaser.Math.Clamp(this.plungeForce + delta * 4, 0, 2200); 
       this.plungeText.setAlpha(Math.sin(time / 30)); this.plungeText.setColor('#ff00e6'); 
-    } else if (Phaser.Input.Keyboard.JustUp(this.keySpace)) {
+    } else if ((DemoDirector.enabled && this.plungeForce > 0) || Phaser.Input.Keyboard.JustUp(this.keySpace)) {
       let plunged = false;
       this.balls.getChildren().forEach(ball => {
         if (ball.x > 730 && ball.y > 400) {
@@ -252,6 +254,28 @@ export class PinballScene extends BaseGameScene {
     [this.wormholeL, this.wormholeR, this.boss].forEach((obj, i) => {
       if (obj && obj.active) obj.setScale(1 + Math.sin(time * 0.006 + i) * 0.04);
     });
+  }
+
+  getDemoFlipperState(time) {
+    const activeBalls = this.balls.getChildren().filter(ball => ball.active);
+    const launchReady = activeBalls.some(ball => ball.x > 730 && ball.y > 400);
+    if (launchReady) {
+      const elapsed = time - (this._demoLaunchStart || 0);
+      if (!this._demoLaunchStart) this._demoLaunchStart = time;
+      return { left: false, right: false, plunge: elapsed < 500 };
+    }
+
+    this._demoLaunchStart = 0;
+    const ball = activeBalls[0];
+    if (!ball) return { left: false, right: false, plunge: false };
+
+    const left = ball.x < GAME_WIDTH / 2 || (ball.y > 460 && ball.body.velocity.y > 0);
+    const right = ball.x >= GAME_WIDTH / 2 || (ball.y > 460 && ball.body.velocity.y > 0);
+    return {
+      left: left && Math.sin(time * 0.04) > -0.2,
+      right: right && Math.cos(time * 0.04) > -0.2,
+      plunge: false,
+    };
   }
 
   onHitBumper(obj1, obj2) {

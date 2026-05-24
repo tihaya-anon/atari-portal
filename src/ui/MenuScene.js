@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT, COLORS, GAME_ORDER, GAME_NAMES, AUDIO_REACTIVE as AR } from '../config.js';
 import { GameManager } from '../core/GameManager.js';
+import { DemoDirector } from '../core/DemoDirector.js';
 import SFX from '../core/SFXManager.js';
 import BGM from '../core/AudioManager.js';
 import AudioReactive from '../core/AudioReactiveSystem.js';
@@ -138,6 +139,15 @@ export class MenuScene extends Phaser.Scene {
     this._sigilPulse = 0;
     this._menuFocus = { x: 0, y: 0 };
     this.events.once('shutdown', this.resetMenuPerspective, this);
+
+    if (DemoDirector.autoplayMenu) {
+      DemoDirector.reset();
+      this.time.delayedCall(DemoDirector.menuDelayMs, () => {
+        if (this.scene.isActive('MenuScene')) {
+          this.startDemoRun();
+        }
+      });
+    }
   }
 
   drawMenuStage3D() {
@@ -842,6 +852,22 @@ export class MenuScene extends Phaser.Scene {
       this.scene.launch('HUDScene');
       this.scene.launch('CRTOverlay');
       this.scene.start(GameManager.currentSceneKey);
+    });
+  }
+
+  startDemoRun() {
+    SFX.menuStart();
+    GameManager.reset();
+    GameManager.state.mode = 'arcade';
+    const sceneKey = DemoDirector.getCurrentSceneKey();
+    GameManager.state.currentGameIndex = Math.max(0, GAME_ORDER.indexOf(sceneKey));
+    GameManager.state.coins = 50;
+    GameManager.state.lives = 99;
+    this.cameras.main.fadeOut(400, 10, 10, 26);
+    this.time.delayedCall(400, () => {
+      this.scene.launch('HUDScene');
+      this.scene.launch('CRTOverlay');
+      this.scene.start(sceneKey);
     });
   }
 }

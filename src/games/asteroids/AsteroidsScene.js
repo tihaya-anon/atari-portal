@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT, COLORS } from '../../config.js';
 import { GameManager } from '../../core/GameManager.js';
+import { DemoDirector } from '../../core/DemoDirector.js';
 import { BaseGameScene } from '../BaseGameScene.js';
 import SFX from '../../core/SFXManager.js';
 import GlitchEffect from '../../vfx/GlitchEffect.js';
@@ -280,11 +281,20 @@ export class AsteroidsScene extends BaseGameScene {
   }
 
   updateShip(dt) {
-    const invX = this.horizontalControlInverted;
-    const left = invX ? (this.cursors.right.isDown || this.keyD.isDown) : (this.cursors.left.isDown || this.keyA.isDown);
-    const right = invX ? (this.cursors.left.isDown || this.keyA.isDown) : (this.cursors.right.isDown || this.keyD.isDown);
-    const thrust = this.cursors.up.isDown || this.keyW.isDown;
-    const brake = this.powerUps.hasEffect('brake') && (this.cursors.down.isDown || this.keyS.isDown);
+    let left;
+    let right;
+    let thrust;
+    let brake = false;
+
+    if (DemoDirector.enabled) {
+      ({ left, right, thrust, brake } = this.getDemoShipControls());
+    } else {
+      const invX = this.horizontalControlInverted;
+      left = invX ? (this.cursors.right.isDown || this.keyD.isDown) : (this.cursors.left.isDown || this.keyA.isDown);
+      right = invX ? (this.cursors.left.isDown || this.keyA.isDown) : (this.cursors.right.isDown || this.keyD.isDown);
+      thrust = this.cursors.up.isDown || this.keyW.isDown;
+      brake = this.powerUps.hasEffect('brake') && (this.cursors.down.isDown || this.keyS.isDown);
+    }
 
     if (left) this.ship.rotation -= ROTATION_SPEED * dt;
     if (right) this.ship.rotation += ROTATION_SPEED * dt;
@@ -324,6 +334,57 @@ export class AsteroidsScene extends BaseGameScene {
       this.shipGlow.setScale(1 + Math.sin(this.time.now * 0.01) * 0.12);
       this.shipGlow.setVisible(this.ship.visible);
     }
+
+    if (DemoDirector.enabled && this.shouldDemoShoot()) {
+      this.fireBullet();
+    }
+  }
+
+  getDemoShipControls() {
+    const target = this.getDemoTarget();
+    if (!target) {
+      return { left: false, right: false, thrust: true, brake: false };
+    }
+
+    const desiredAngle = Phaser.Math.Angle.Between(this.ship.x, this.ship.y, target.x, target.y);
+    const diff = Phaser.Math.Angle.Wrap(desiredAngle - this.ship.rotation);
+    const speed = Math.hypot(this.shipVx, this.shipVy);
+
+    return {
+      left: diff < -0.14,
+      right: diff > 0.14,
+      thrust: Math.abs(diff) < 0.75 && speed < 220,
+      brake: this.powerUps.hasEffect('brake') && speed > 260 && Math.abs(diff) > 2.1,
+    };
+  }
+
+  getDemoTarget() {
+    const liveAsteroids = this.asteroids?.filter?.(asteroid => asteroid?.active) || [];
+    const liveUfo = this.ufoSprite?.active ? this.ufoSprite : null;
+
+    let target = null;
+    let bestDist = Infinity;
+    for (const obj of [...liveAsteroids, liveUfo].filter(Boolean)) {
+      const dist = Phaser.Math.Distance.Between(this.ship.x, this.ship.y, obj.x, obj.y);
+      if (dist < bestDist) {
+        bestDist = dist;
+        target = obj;
+      }
+    }
+    return target;
+  }
+
+  shouldDemoShoot() {
+    const target = this.getDemoTarget();
+    if (!target) return false;
+    if (this.time.now - (this._demoLastFire || 0) < 180) return false;
+
+    const desiredAngle = Phaser.Math.Angle.Between(this.ship.x, this.ship.y, target.x, target.y);
+    const diff = Math.abs(Phaser.Math.Angle.Wrap(desiredAngle - this.ship.rotation));
+    if (diff > 0.24) return false;
+
+    this._demoLastFire = this.time.now;
+    return true;
   }
 
   showThrustFlicker() {

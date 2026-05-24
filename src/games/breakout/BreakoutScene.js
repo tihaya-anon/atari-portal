@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT, COLORS } from '../../config.js';
 import { GameManager } from '../../core/GameManager.js';
+import { DemoDirector } from '../../core/DemoDirector.js';
 import { BaseGameScene } from '../BaseGameScene.js';
 import SFX from '../../core/SFXManager.js';
 import GlitchEffect from '../../vfx/GlitchEffect.js';
@@ -517,9 +518,11 @@ export class BreakoutScene extends BaseGameScene {
 
     const dt = delta / 1000;
     const invX = this.horizontalControlInverted;
-    const leftDown = this.cursors.left.isDown || this.keyA.isDown;
-    const rightDown = this.cursors.right.isDown || this.keyD.isDown;
-    const paddleSpeed = this.keyShift.isDown ? PADDLE_SPEED * PADDLE_SLOW_FACTOR : PADDLE_SPEED;
+    const demoMove = DemoDirector.enabled ? this.getDemoPaddleDirection() : 0;
+    const leftDown = demoMove < 0 || this.cursors.left.isDown || this.keyA.isDown;
+    const rightDown = demoMove > 0 || this.cursors.right.isDown || this.keyD.isDown;
+    const slowMode = DemoDirector.enabled ? Math.abs(demoMove) < 0.35 : this.keyShift.isDown;
+    const paddleSpeed = slowMode ? PADDLE_SPEED * PADDLE_SLOW_FACTOR : PADDLE_SPEED;
     const half = this.paddle.displayWidth / 2;
 
     if (invX ? rightDown : leftDown) {
@@ -538,6 +541,21 @@ export class BreakoutScene extends BaseGameScene {
       this.tryEnterPortal(this.ball.x, this.ball.y);
     }
     this.syncGlowObjects();
+  }
+
+  getDemoPaddleDirection() {
+    if (this.ballOnPaddle) {
+      if (this.time.now - (this._demoLaunchAt || 0) > 900) {
+        this._demoLaunchAt = this.time.now;
+        this.launchBall();
+      }
+      const offset = Math.sin(this.time.now * 0.004) * 90;
+      return Phaser.Math.Clamp(((GAME_WIDTH / 2 + offset) - this.paddle.x) / 48, -1, 1);
+    }
+
+    const lead = Phaser.Math.Clamp(this.ball.body?.velocity?.x || 0, -260, 260) * 0.12;
+    const targetX = Phaser.Math.Clamp(this.ball.x + lead, 40, GAME_WIDTH - 40);
+    return Phaser.Math.Clamp((targetX - this.paddle.x) / 36, -1, 1);
   }
 
   syncGlowObjects() {
