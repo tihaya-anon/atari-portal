@@ -197,16 +197,16 @@ export class PinballScene extends BaseGameScene {
     this.wormholeL.rotation -= 0.05;
     this.wormholeR.rotation += 0.05;
 
-    const inv = this.controlInverted;
+    const invX = this.horizontalControlInverted;
     const isLeftDown = this.keyA.isDown || this.cursors.left.isDown;
     const isRightDown = this.keyD.isDown || this.cursors.right.isDown;
 
     // 🌟 控制 4 把拨杆的角度：左侧一起动，右侧一起动
-    this.leftFlipper.setAngle((!inv && isLeftDown) || (inv && isRightDown) ? -30 : 20);
-    this.upperLeftFlipper.setAngle((!inv && isLeftDown) || (inv && isRightDown) ? -30 : 20);
+    this.leftFlipper.setAngle((!invX && isLeftDown) || (invX && isRightDown) ? -30 : 20);
+    this.upperLeftFlipper.setAngle((!invX && isLeftDown) || (invX && isRightDown) ? -30 : 20);
 
-    this.rightFlipper.setAngle((!inv && isRightDown) || (inv && isLeftDown) ? 30 : -20);
-    this.upperRightFlipper.setAngle((!inv && isRightDown) || (inv && isLeftDown) ? 30 : -20);
+    this.rightFlipper.setAngle((!invX && isRightDown) || (invX && isLeftDown) ? 30 : -20);
+    this.upperRightFlipper.setAngle((!invX && isRightDown) || (invX && isLeftDown) ? 30 : -20);
 
     if (this.keySpace.isDown) {
       this.plungeForce = Phaser.Math.Clamp(this.plungeForce + delta * 4, 0, 2200); 

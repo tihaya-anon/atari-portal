@@ -63,15 +63,21 @@ export class MutationSystem {
 
   rollMutation() {
     const mutation = MUTATIONS[Math.floor(Math.random() * MUTATIONS.length)];
-    this.activeMutation = mutation;
-    this.mutationState = {};
-    mutation.apply(this.mutationState);
-    return mutation;
+    return this.setMutationById(mutation.id);
   }
 
   clearMutation() {
     this.activeMutation = null;
     this.mutationState = {};
+  }
+
+  setMutationById(id) {
+    const mutation = MUTATIONS.find(m => m.id === id);
+    if (!mutation) return null;
+    this.activeMutation = mutation;
+    this.mutationState = {};
+    mutation.apply(this.mutationState);
+    return mutation;
   }
 
   get speedMultiplier() {
@@ -112,7 +118,8 @@ export class MutationSystem {
 
   applyToScene(scene) {
     if (this.isMirrored) {
-      try { scene.game.canvas.style.transform = 'scaleX(-1)'; } catch (_) {}
+      scene._mutMirror = true;
+      try { scene._updateCanvasPerspective?.(scene._foregroundFocus?.x ?? 0, scene._foregroundFocus?.y ?? 0); } catch (_) {}
     }
     if (this.brightness < 1) {
       const dimAlpha = Math.min(1 - this.brightness, 0.3);
@@ -155,7 +162,8 @@ export class MutationSystem {
   }
 
   cleanupScene(scene) {
-    try { scene.game.canvas.style.transform = ''; } catch (_) {}
+    scene._mutMirror = false;
+    try { scene._updateCanvasPerspective?.(0, 0); } catch (_) {}
     if (scene._mutDimOverlay) {
       scene._mutDimOverlay.destroy();
       scene._mutDimOverlay = null;

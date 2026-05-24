@@ -162,12 +162,12 @@ export class FallDownScene extends BaseGameScene {
       this.cameras.main.flash(1000, 255, 255, 255);
     }
 
-    const inv = this.controlInverted;
+    const invX = this.horizontalControlInverted;
     const isLeft = this.keyA.isDown || this.cursors.left.isDown;
     const isRight = this.keyD.isDown || this.cursors.right.isDown;
 
-    if ((!inv && isLeft) || (inv && isRight)) this.player.setVelocityX(-400);
-    else if ((!inv && isRight) || (inv && isLeft)) this.player.setVelocityX(400);
+    if ((!invX && isLeft) || (invX && isRight)) this.player.setVelocityX(-400);
+    else if ((!invX && isRight) || (invX && isLeft)) this.player.setVelocityX(400);
     else this.player.setVelocityX(0);
 
     let lowestPlatY = 0;

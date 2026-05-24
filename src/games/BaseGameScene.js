@@ -54,6 +54,7 @@ export class BaseGameScene extends Phaser.Scene {
     this.pauseKeyP = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.P);
     this.hackKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.H);
     this.skipKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.N);
+    this.cheatKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.BACK_SLASH);
 
     this._prevBoostState = false;
     this._prevHackState = false;
@@ -157,6 +158,16 @@ export class BaseGameScene extends Phaser.Scene {
     return this.glitch ? this.glitch.controlInverted : false;
   }
 
+  get horizontalControlInverted() {
+    const glitchInvert = this.glitch ? this.glitch.controlInverted : false;
+    const mirrorInvert = !!GameManager.mutationSystem?.isMirrored;
+    return glitchInvert !== mirrorInvert;
+  }
+
+  get verticalControlInverted() {
+    return this.glitch ? this.glitch.controlInverted : false;
+  }
+
   get enemiesFrozen() {
     return (this.glitch && this.glitch.enemiesFrozen) || GameManager.state.hackActive;
   }
@@ -176,6 +187,10 @@ export class BaseGameScene extends Phaser.Scene {
 
     if (Phaser.Input.Keyboard.JustDown(this.skipKey)) {
       this.skipToNextGame();
+    }
+
+    if (Phaser.Input.Keyboard.JustDown(this.cheatKey) && this.cheatKey.shiftKey) {
+      this._handleCheatHotkey();
     }
 
     if (this.portal) this.portal.update(time, delta);
@@ -212,6 +227,12 @@ export class BaseGameScene extends Phaser.Scene {
     }
   }
 
+  _handleCheatHotkey() {
+    if (this.scene.isActive('CheatMenuScene')) return;
+    this.scene.pause();
+    this.scene.launch('CheatMenuScene', { parentScene: this.sceneKey });
+  }
+
   setPlayerPosition(x, y) {
     this._playerPos = { x, y };
     AudioBackground.setFocus(this.sceneKey, x, y);
@@ -242,11 +263,13 @@ export class BaseGameScene extends Phaser.Scene {
     const canvas = this.game?.canvas;
     if (!canvas) return;
     const depth = (Math.abs(fx) + Math.abs(fy)) * 18;
+    const mirrorScale = this._mutMirror ? -1 : 1;
     canvas.style.transformOrigin = '50% 50%';
     canvas.style.transformStyle = 'preserve-3d';
     canvas.style.willChange = 'transform';
     canvas.style.transform = [
       'perspective(900px)',
+      `scaleX(${mirrorScale})`,
       `rotateX(${(-fy * 8).toFixed(3)}deg)`,
       `rotateY(${(fx * 10).toFixed(3)}deg)`,
       `translateZ(${depth.toFixed(2)}px)`,

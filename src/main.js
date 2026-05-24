@@ -9,6 +9,7 @@ import { TransitionScene } from './ui/TransitionScene.js';
 import { VictoryScene } from './ui/VictoryScene.js';
 import { CRTOverlay } from './vfx/CRTOverlay.js';
 import { ModSelectScene } from './ui/ModSelectScene.js';
+import { CheatMenuScene } from './ui/CheatMenuScene.js';
 import { PacmanScene } from './games/pacman/PacmanScene.js';
 import { BreakoutScene } from './games/breakout/BreakoutScene.js';
 import { SpaceInvadersScene } from './games/space-invaders/SpaceInvadersScene.js';
@@ -44,6 +45,7 @@ const config = {
     VictoryScene,
     CRTOverlay,
     ModSelectScene,
+    CheatMenuScene,
     PacmanScene,
     BreakoutScene,
     SpaceInvadersScene,

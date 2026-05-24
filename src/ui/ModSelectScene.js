@@ -37,6 +37,21 @@ export class ModSelectScene extends Phaser.Scene {
 
     const modSystem = GameManager.modSystem;
     const choices = modSystem.getRandomChoices(3);
+    const forcedModId = GameManager.consumeNextModCheat();
+    if (forcedModId) {
+      const forcedMod = modSystem.getModById(forcedModId);
+      const alreadyOwned = forcedMod && modSystem.hasMod(forcedMod.id);
+      if (forcedMod && !alreadyOwned) {
+        const existingIdx = choices.findIndex(choice => choice.id === forcedMod.id);
+        if (existingIdx > 0) {
+          choices.splice(existingIdx, 1);
+          choices.unshift(forcedMod);
+        } else if (existingIdx < 0) {
+          choices.pop();
+          choices.unshift(forcedMod);
+        }
+      }
+    }
 
     const cardWidth = 200;
     const cardHeight = 220;

@@ -702,20 +702,20 @@ export class MenuScene extends Phaser.Scene {
     this.shopItems = [];
 
     const cx = GAME_WIDTH / 2;
-    const shadow = this.add.rectangle(cx + 16, 366, 512, 292, 0x000000, 0.45).setDepth(99);
-    const glow = this.add.rectangle(cx, 350, 512, 292, COLORS.NEON_PURPLE, 0.09).setDepth(99).setBlendMode(Phaser.BlendModes.ADD);
-    const bg = this.add.rectangle(cx, 350, 500, 280, COLORS.HUD_BG, 0.96).setDepth(100);
+    const shadow = this.add.rectangle(cx + 16, 366, 512, 352, 0x000000, 0.45).setDepth(99);
+    const glow = this.add.rectangle(cx, 350, 512, 340, COLORS.NEON_PURPLE, 0.09).setDepth(99).setBlendMode(Phaser.BlendModes.ADD);
+    const bg = this.add.rectangle(cx, 350, 500, 330, COLORS.HUD_BG, 0.96).setDepth(100);
     const borderG = this.add.graphics().setDepth(100);
-    NeonGlow.strokeRect(borderG, cx - 250, 210, 500, 280, COLORS.NEON_PURPLE, 1, 0.5);
+    NeonGlow.strokeRect(borderG, cx - 250, 185, 500, 330, COLORS.NEON_PURPLE, 1, 0.5);
     this.shopItems.push(shadow, glow, bg, borderG);
 
-    const title = this.add.text(cx, 225, '// PERMANENT UPGRADES', {
+    const title = this.add.text(cx, 200, '// REBOOT CONTROL', {
       fontSize: '14px', fontFamily: 'monospace', color: '#b845ff',
     }).setOrigin(0.5).setDepth(101);
     this.shopItems.push(title);
 
     const permCoins = GameManager.getPermanentCoins();
-    const coinLabel = this.add.text(cx, 248, `CREDITS: ${permCoins}`, {
+    const coinLabel = this.add.text(cx, 224, `CREDITS: ${permCoins}`, {
       fontSize: '12px', fontFamily: 'monospace', color: '#ffd700',
     }).setOrigin(0.5).setDepth(101);
     this.shopItems.push(coinLabel);
@@ -729,7 +729,7 @@ export class MenuScene extends Phaser.Scene {
     ];
 
     upgrades.forEach((up, i) => {
-      const y = 280 + i * 38;
+      const y = 256 + i * 35;
       const maxed = up.current >= up.max;
       const canAfford = permCoins >= up.cost;
       const color = maxed ? '#333355' : (canAfford ? '#39ff14' : '#555577');
@@ -761,20 +761,49 @@ export class MenuScene extends Phaser.Scene {
       }
     });
 
-    const achTitle = this.add.text(cx, 440, '// CODEX', {
+    const achTitle = this.add.text(cx, 398, '// CODEX', {
       fontSize: '11px', fontFamily: 'monospace', color: '#00f0ff',
     }).setOrigin(0.5).setDepth(101);
     this.shopItems.push(achTitle);
 
     const achSys = GameManager.achievementSystem;
     if (achSys) {
-      const achText = this.add.text(cx, 460, `${achSys.totalUnlocked}/${achSys.totalAchievements} UNLOCKED`, {
+      const achText = this.add.text(cx, 416, `${achSys.totalUnlocked}/${achSys.totalAchievements} UNLOCKED`, {
         fontSize: '10px', fontFamily: 'monospace', color: '#555577',
       }).setOrigin(0.5).setDepth(101);
       this.shopItems.push(achText);
     }
 
-    const closeBtn = this.add.text(cx, 485, '> CLOSE', {
+    const perfFps = AudioBackground.getPerformanceFps();
+    const effectsLevel = AudioBackground.getAnimationEffectsLevel();
+    const highEffects = effectsLevel === 'high';
+    const effectsLabel = this.add.text(cx - 180, 438, `ANIMATION EFFECTS: ${effectsLevel.toUpperCase()}`, {
+      fontSize: '11px', fontFamily: 'monospace', color: highEffects ? '#39ff14' : '#7777aa',
+    }).setDepth(101);
+    this.shopItems.push(effectsLabel);
+
+    const effectsBtn = this.add.text(cx + 148, 438, `[SET ${highEffects ? 'LOW' : 'HIGH'}]`, {
+      fontSize: '11px', fontFamily: 'monospace', color: '#00f0ff',
+    }).setOrigin(0.5, 0).setDepth(101).setInteractive({ useHandCursor: true });
+    effectsBtn.on('pointerover', () => effectsBtn.setColor('#ffffff'));
+    effectsBtn.on('pointerout', () => effectsBtn.setColor('#00f0ff'));
+    effectsBtn.on('pointerdown', () => {
+      SFX.menuSelect();
+      AudioBackground.setAnimationEffectsLevel(highEffects ? 'low' : 'high');
+      this.shopItems.forEach(item => item.destroy());
+      this.shopItems = [];
+      this.shopOpen = false;
+      this.openUpgradeShop();
+    });
+    this.shopItems.push(effectsBtn);
+
+    const fpsText = perfFps === null ? 'PERF FPS: PENDING' : `PERF FPS: ${Math.round(perfFps)}`;
+    const fpsLabel = this.add.text(cx, 462, fpsText, {
+      fontSize: '9px', fontFamily: 'monospace', color: '#555577',
+    }).setOrigin(0.5).setDepth(101);
+    this.shopItems.push(fpsLabel);
+
+    const closeBtn = this.add.text(cx, 492, '> CLOSE', {
       fontSize: '12px', fontFamily: 'monospace', color: '#ff1744',
     }).setOrigin(0.5).setDepth(101).setInteractive({ useHandCursor: true });
     closeBtn.on('pointerdown', () => {
@@ -788,7 +817,7 @@ export class MenuScene extends Phaser.Scene {
   startDebugGame(sceneKey, index) {
     SFX.menuStart();
     GameManager.reset();
-    GameManager.state.mode = 'arcade';
+    GameManager.state.mode = 'story';
     GameManager.state.currentGameIndex = index;
     GameManager.state.coins = 10;
     this.cameras.main.fadeOut(400, 10, 10, 26);
@@ -803,6 +832,11 @@ export class MenuScene extends Phaser.Scene {
     SFX.menuStart();
     GameManager.reset();
     GameManager.state.mode = mode;
+    if (mode === 'arcade') {
+      GameManager.state.currentGameIndex = Phaser.Math.Between(0, GAME_ORDER.length - 1);
+    } else {
+      GameManager.state.currentGameIndex = 0;
+    }
     this.cameras.main.fadeOut(400, 10, 10, 26);
     this.time.delayedCall(400, () => {
       this.scene.launch('HUDScene');

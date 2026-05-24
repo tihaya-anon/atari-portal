@@ -1333,6 +1333,10 @@ const MODE_BG = {
   arcade: 'djconsole',
 };
 
+const LOW_EFFECT_BG = {
+  djconsole: 'synthwave',
+};
+
 function makeUniforms(vw, vh, pr) {
   return {
     iTime:         { value: 0 },
@@ -1348,6 +1352,8 @@ function makeUniforms(vw, vh, pr) {
 const AudioBackground = {
   _ready: false,
   _current: null,
+  _sceneName: 'MenuScene',
+  _mode: null,
 
   init() {
     if (this._ready) return;
@@ -1497,13 +1503,32 @@ const AudioBackground = {
     requestAnimationFrame(loop);
 
     window.addEventListener('resize', () => this._resize());
+    window.addEventListener('animation-effects-level-changed', () => this._refreshSceneMaterial());
   },
 
   setScene(sceneName, mode) {
     if (!this._ready) return;
     if (this._warpActive) return;
+    this._sceneName = sceneName;
+    this._mode = mode;
     ThreeSceneOverlay.setScene(sceneName);
+    const target = this._resolveTarget(sceneName, mode);
+    if (target === this._current) return;
+    this._current = target;
+    this._quad.material = this._materials[target];
+  },
+
+  _resolveTarget(sceneName, mode) {
     const target = SCENE_MAP[sceneName] || (mode && MODE_BG[mode]) || 'universe';
+    if (this.getAnimationEffectsLevel() === 'low') {
+      return LOW_EFFECT_BG[target] || target;
+    }
+    return target;
+  },
+
+  _refreshSceneMaterial() {
+    if (!this._ready || this._warpActive) return;
+    const target = this._resolveTarget(this._sceneName, this._mode);
     if (target === this._current) return;
     this._current = target;
     this._quad.material = this._materials[target];
@@ -1512,6 +1537,19 @@ const AudioBackground = {
   setFocus(sceneName, x, y) {
     if (!this._ready || this._warpActive) return;
     ThreeSceneOverlay.setFocus(sceneName, x, y);
+  },
+
+  getAnimationEffectsLevel() {
+    return ThreeSceneOverlay.getAnimationEffectsLevel();
+  },
+
+  setAnimationEffectsLevel(level) {
+    ThreeSceneOverlay.setAnimationEffectsLevel(level);
+    this._refreshSceneMaterial();
+  },
+
+  getPerformanceFps() {
+    return ThreeSceneOverlay.getPerformanceFps();
   },
 
   startWarp(durationMs = 2800, onMidpoint, onComplete) {
@@ -1534,10 +1572,10 @@ const AudioBackground = {
 
   stopWarp(targetScene, mode) {
     this._warpActive = false;
+    this._sceneName = targetScene;
+    this._mode = mode;
     ThreeSceneOverlay.setScene(targetScene);
-    const target = (targetScene && SCENE_MAP[targetScene])
-      || (mode && MODE_BG[mode])
-      || this._preWarpTarget || 'universe';
+    const target = this._resolveTarget(targetScene, mode);
     this._current = target;
     this._quad.material = this._materials[target];
   },

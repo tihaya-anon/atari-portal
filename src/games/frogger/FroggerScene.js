@@ -251,11 +251,12 @@ export class FroggerScene extends BaseGameScene {
     let dy = 0;
     const { JustDown } = Phaser.Input.Keyboard;
 
-    const inv = this.controlInverted;
-    if (JustDown(this.cursors.up) || JustDown(this.keyW)) dy = inv ? 1 : -1;
-    else if (JustDown(this.cursors.down) || JustDown(this.keyS)) dy = inv ? -1 : 1;
-    else if (JustDown(this.cursors.left) || JustDown(this.keyA)) dx = inv ? 1 : -1;
-    else if (JustDown(this.cursors.right) || JustDown(this.keyD)) dx = inv ? -1 : 1;
+    const invX = this.horizontalControlInverted;
+    const invY = this.verticalControlInverted;
+    if (JustDown(this.cursors.up) || JustDown(this.keyW)) dy = invY ? 1 : -1;
+    else if (JustDown(this.cursors.down) || JustDown(this.keyS)) dy = invY ? -1 : 1;
+    else if (JustDown(this.cursors.left) || JustDown(this.keyA)) dx = invX ? 1 : -1;
+    else if (JustDown(this.cursors.right) || JustDown(this.keyD)) dx = invX ? -1 : 1;
 
     if (dx === 0 && dy === 0) return;
 

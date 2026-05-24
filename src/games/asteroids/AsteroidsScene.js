@@ -280,9 +280,9 @@ export class AsteroidsScene extends BaseGameScene {
   }
 
   updateShip(dt) {
-    const inv = this.controlInverted;
-    const left = inv ? (this.cursors.right.isDown || this.keyD.isDown) : (this.cursors.left.isDown || this.keyA.isDown);
-    const right = inv ? (this.cursors.left.isDown || this.keyA.isDown) : (this.cursors.right.isDown || this.keyD.isDown);
+    const invX = this.horizontalControlInverted;
+    const left = invX ? (this.cursors.right.isDown || this.keyD.isDown) : (this.cursors.left.isDown || this.keyA.isDown);
+    const right = invX ? (this.cursors.left.isDown || this.keyA.isDown) : (this.cursors.right.isDown || this.keyD.isDown);
     const thrust = this.cursors.up.isDown || this.keyW.isDown;
     const brake = this.powerUps.hasEffect('brake') && (this.cursors.down.isDown || this.keyS.isDown);
 

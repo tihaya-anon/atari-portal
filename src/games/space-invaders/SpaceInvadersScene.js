@@ -244,12 +244,13 @@ export class SpaceInvadersScene extends BaseGameScene {
     const minY = GAME_HEIGHT * 0.5;
     const maxY = GAME_HEIGHT - 16;
 
-    const inv = this.controlInverted;
-    if ((inv ? (this.cursors.right.isDown || this.keyD.isDown) : (this.cursors.left.isDown || this.keyA.isDown))) vx = -PLAYER_SPEED;
-    else if ((inv ? (this.cursors.left.isDown || this.keyA.isDown) : (this.cursors.right.isDown || this.keyD.isDown))) vx = PLAYER_SPEED;
+    const invX = this.horizontalControlInverted;
+    const invY = this.verticalControlInverted;
+    if ((invX ? (this.cursors.right.isDown || this.keyD.isDown) : (this.cursors.left.isDown || this.keyA.isDown))) vx = -PLAYER_SPEED;
+    else if ((invX ? (this.cursors.left.isDown || this.keyA.isDown) : (this.cursors.right.isDown || this.keyD.isDown))) vx = PLAYER_SPEED;
 
-    if ((inv ? (this.cursors.down.isDown || this.keyS.isDown) : (this.cursors.up.isDown || this.keyW.isDown))) vy = -PLAYER_SPEED;
-    else if ((inv ? (this.cursors.up.isDown || this.keyW.isDown) : (this.cursors.down.isDown || this.keyS.isDown))) vy = PLAYER_SPEED;
+    if ((invY ? (this.cursors.down.isDown || this.keyS.isDown) : (this.cursors.up.isDown || this.keyW.isDown))) vy = -PLAYER_SPEED;
+    else if ((invY ? (this.cursors.up.isDown || this.keyW.isDown) : (this.cursors.down.isDown || this.keyS.isDown))) vy = PLAYER_SPEED;
 
     this.player.x = Phaser.Math.Clamp(this.player.x + vx * dt, 16, GAME_WIDTH - 16);
     this.player.y = Phaser.Math.Clamp(this.player.y + vy * dt, minY, maxY);

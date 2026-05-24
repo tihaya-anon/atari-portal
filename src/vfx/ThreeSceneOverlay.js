@@ -4,6 +4,10 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 const FRAME_W = 800;
 const FRAME_H = 600;
 const FOCUS_DEADZONE = 0.04;
+const PERFORMANCE_FPS_KEY = 'performance_fps';
+const ANIMATION_EFFECTS_LEVEL_KEY = 'animation_effects_level';
+const ARM_FPS_SAMPLE_SECONDS = 3;
+const ARM_MIN_FPS = 30;
 
 const THEMES = {
   default: {
@@ -197,6 +201,50 @@ const THEMES = {
 
 function hexToCss(hex) {
   return `#${hex.toString(16).padStart(6, '0')}`;
+}
+
+function readStoredFps() {
+  try {
+    const raw = localStorage.getItem(PERFORMANCE_FPS_KEY);
+    if (raw === null || raw === '') return null;
+    const value = Number(raw);
+    return Number.isFinite(value) && value > 0 ? value : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function writeStoredFps(value) {
+  try {
+    localStorage.setItem(PERFORMANCE_FPS_KEY, String(Math.round(value)));
+  } catch (_) { /* silent */ }
+}
+
+function normalizeEffectsLevel(value) {
+  return value === 'low' ? 'low' : 'high';
+}
+
+function readEffectsLevel() {
+  try {
+    const raw = localStorage.getItem(ANIMATION_EFFECTS_LEVEL_KEY);
+    return raw === null ? 'high' : normalizeEffectsLevel(raw);
+  } catch (_) {
+    return 'high';
+  }
+}
+
+function hasEffectsPreference() {
+  try {
+    return localStorage.getItem(ANIMATION_EFFECTS_LEVEL_KEY) !== null;
+  } catch (_) {
+    return true;
+  }
+}
+
+function writeEffectsLevel(level) {
+  try {
+    localStorage.setItem(ANIMATION_EFFECTS_LEVEL_KEY, normalizeEffectsLevel(level));
+  } catch (_) { /* silent */ }
 }
 
 function makePanelTexture(primary, secondary, kind = 'panel') {
@@ -589,11 +637,22 @@ const ThreeSceneOverlay = {
   _ready: false,
   _sceneName: 'MenuScene',
   _armsLoaded: false,
+  _armsLoading: false,
+  _animationEffectsLevel: 'high',
+  _armsPerfCheckDone: false,
+  _armsPerfSamples: 0,
+  _armsPerfElapsed: 0,
 
   init(vw, vh, pr) {
     if (this._ready) return;
     this._ready = true;
     this._pr = pr;
+    const storedFps = readStoredFps();
+    if (!hasEffectsPreference() && storedFps !== null) {
+      writeEffectsLevel(storedFps >= ARM_MIN_FPS ? 'high' : 'low');
+    }
+    this._animationEffectsLevel = readEffectsLevel();
+    this._armsPerfCheckDone = storedFps !== null;
 
     this.renderer = new THREE.WebGLRenderer({
       alpha: true,
@@ -639,8 +698,6 @@ const ThreeSceneOverlay = {
     this.armRight.visible = false;
     this.root.add(this.armLeft, this.armRight);
 
-    this._loadArms();
-
     this.cornerMonitors = new THREE.Group();
     this.cornerMonitors.add(
       createScreen(112, 100, -FRAME_W / 2 - 84, 220, -0.16, 'monitor', THEMES.MenuScene.primary, THEMES.MenuScene.secondary),
@@ -670,11 +727,24 @@ const ThreeSceneOverlay = {
     this.root.add(this.depthGrid, this.mazeHologram, this.riftField);
 
     this._applyTheme(this._sceneName);
+    this._maybeLoadArms();
+  },
+
+  _shouldShowArms() {
+    const theme = this._theme || THEMES[this._sceneName] || THEMES.default;
+    return this._animationEffectsLevel === 'high' && !!theme.showArms;
+  },
+
+  _maybeLoadArms() {
+    if (!this._ready || this._animationEffectsLevel !== 'high' || this._armsLoaded || this._armsLoading) return;
+    if (!this._armsPerfCheckDone) return;
+    this._loadArms();
   },
 
   _loadArms() {
+    this._armsLoading = true;
     const loader = new GLTFLoader();
-    loader.load('assets/robotic_arm.glb', (gltf) => {
+    loader.load('assets/robotic_arm_lite.glb', (gltf) => {
       const armModel = gltf.scene;
       armModel.scale.setScalar(ARM_SCALE);
 
@@ -704,12 +774,61 @@ const ThreeSceneOverlay = {
       applyNeonOverlay(rightClone, THEMES.MenuScene.primary, THEMES.MenuScene.secondary);
       this.armRight.add(rightClone);
 
-      this.armLeft.visible = true;
-      this.armRight.visible = true;
+      this.armLeft.visible = this._shouldShowArms();
+      this.armRight.visible = this._shouldShowArms();
       this._armsLoaded = true;
+      this._armsLoading = false;
 
       this._applyTheme(this._sceneName);
+    }, undefined, () => {
+      this._armsLoading = false;
     });
+  },
+
+  _sampleStartupFps(deltaSeconds) {
+    if (this._armsPerfCheckDone) return;
+    this._armsPerfElapsed += deltaSeconds;
+    this._armsPerfSamples += 1;
+    if (this._armsPerfElapsed < ARM_FPS_SAMPLE_SECONDS) return;
+
+    const fps = this._armsPerfSamples / this._armsPerfElapsed;
+    writeStoredFps(fps);
+    this._armsPerfCheckDone = true;
+
+    if (!hasEffectsPreference()) {
+      this._animationEffectsLevel = fps >= ARM_MIN_FPS ? 'high' : 'low';
+      writeEffectsLevel(this._animationEffectsLevel);
+      this._emitEffectsLevelChanged();
+    } else {
+      this._animationEffectsLevel = readEffectsLevel();
+    }
+
+    this._applyTheme(this._sceneName);
+    this._maybeLoadArms();
+  },
+
+  getAnimationEffectsLevel() {
+    return this._animationEffectsLevel;
+  },
+
+  setAnimationEffectsLevel(level) {
+    this._animationEffectsLevel = normalizeEffectsLevel(level);
+    writeEffectsLevel(this._animationEffectsLevel);
+    this._emitEffectsLevelChanged();
+    this._applyTheme(this._sceneName);
+    this._maybeLoadArms();
+  },
+
+  _emitEffectsLevelChanged() {
+    try {
+      window.dispatchEvent(new CustomEvent('animation-effects-level-changed', {
+        detail: { level: this._animationEffectsLevel },
+      }));
+    } catch (_) { /* silent */ }
+  },
+
+  getPerformanceFps() {
+    return readStoredFps();
   },
 
   setScene(sceneName) {
@@ -735,8 +854,9 @@ const ThreeSceneOverlay = {
     if (this._armsLoaded) {
       recolorArm(this.armLeft, theme.primary, theme.secondary);
       recolorArm(this.armRight, theme.primary, theme.secondary);
-      this.armLeft.visible = !!theme.showArms;
-      this.armRight.visible = !!theme.showArms;
+      const visible = this._shouldShowArms();
+      this.armLeft.visible = visible;
+      this.armRight.visible = visible;
     }
 
     this.keyLight.color.setHex(theme.primary);
@@ -792,6 +912,9 @@ const ThreeSceneOverlay = {
 
   update(time, audioReactive) {
     if (!this._ready) return;
+    const deltaSeconds = Math.min(0.1, Math.max(0, time - (this._lastUpdateTime ?? time)));
+    this._lastUpdateTime = time;
+    this._sampleStartupFps(deltaSeconds);
 
     const ar = audioReactive;
     const energy = ar && ar._connected ? ar.energy : 0.12;

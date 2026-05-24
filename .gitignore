@@ -1,5 +1,8 @@
 node_modules/
 dist/
+release/
 .DS_Store
 *.local
 *.cursor
+.idea/
+unused/

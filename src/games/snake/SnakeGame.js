@@ -135,17 +135,18 @@ export class SnakeGame extends BaseGameScene {
   }
 
   handleInput() {
-    const inv = this.controlInverted;
+    const invX = this.horizontalControlInverted;
+    const invY = this.verticalControlInverted;
     let newDir = null;
 
     if (Phaser.Input.Keyboard.JustDown(this.cursors.left) || Phaser.Input.Keyboard.JustDown(this.wasd.left)) {
-      newDir = inv ? DIRS.RIGHT : DIRS.LEFT;
+      newDir = invX ? DIRS.RIGHT : DIRS.LEFT;
     } else if (Phaser.Input.Keyboard.JustDown(this.cursors.right) || Phaser.Input.Keyboard.JustDown(this.wasd.right)) {
-      newDir = inv ? DIRS.LEFT : DIRS.RIGHT;
+      newDir = invX ? DIRS.LEFT : DIRS.RIGHT;
     } else if (Phaser.Input.Keyboard.JustDown(this.cursors.up) || Phaser.Input.Keyboard.JustDown(this.wasd.up)) {
-      newDir = inv ? DIRS.DOWN : DIRS.UP;
+      newDir = invY ? DIRS.DOWN : DIRS.UP;
     } else if (Phaser.Input.Keyboard.JustDown(this.cursors.down) || Phaser.Input.Keyboard.JustDown(this.wasd.down)) {
-      newDir = inv ? DIRS.UP : DIRS.DOWN;
+      newDir = invY ? DIRS.UP : DIRS.DOWN;
     }
 
     if (newDir && (newDir.x !== -this.direction.x || newDir.y !== -this.direction.y)) {

@@ -29,6 +29,8 @@ const ROW_TEXTURES = [
 const PADDLE_Y = GAME_HEIGHT - 40;
 const PADDLE_BASE_W = 80;
 const PADDLE_H = 12;
+const PADDLE_SPEED = 500;
+const PADDLE_SLOW_FACTOR = 0.45;
 const BALL_SPEED_BASE = 350;
 const BALL_SPEED_INCREMENT = 12;
 
@@ -58,6 +60,7 @@ export class BreakoutScene extends BaseGameScene {
     this.cursors = this.input.keyboard.createCursorKeys();
     this.keyA = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A);
     this.keyD = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D);
+    this.keyShift = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
 
     this.drawCyberArena();
     this.drawBrickFieldBorder();
@@ -67,8 +70,8 @@ export class BreakoutScene extends BaseGameScene {
     this.setupCollisions();
 
     this.input.on('pointermove', (pointer) => {
-      const inv = this.controlInverted;
-      const px = inv ? GAME_WIDTH - pointer.x : pointer.x;
+      const invX = this.horizontalControlInverted;
+      const px = invX ? GAME_WIDTH - pointer.x : pointer.x;
       const half = this.paddle.displayWidth / 2;
       this.paddle.x = Phaser.Math.Clamp(px, half, GAME_WIDTH - half);
       if (this.ballOnPaddle) {
@@ -513,15 +516,15 @@ export class BreakoutScene extends BaseGameScene {
     }
 
     const dt = delta / 1000;
-    const paddleSpeed = 500;
-    const inv = this.controlInverted;
+    const invX = this.horizontalControlInverted;
     const leftDown = this.cursors.left.isDown || this.keyA.isDown;
     const rightDown = this.cursors.right.isDown || this.keyD.isDown;
+    const paddleSpeed = this.keyShift.isDown ? PADDLE_SPEED * PADDLE_SLOW_FACTOR : PADDLE_SPEED;
     const half = this.paddle.displayWidth / 2;
 
-    if (inv ? rightDown : leftDown) {
+    if (invX ? rightDown : leftDown) {
       this.paddle.x -= paddleSpeed * dt;
-    } else if (inv ? leftDown : rightDown) {
+    } else if (invX ? leftDown : rightDown) {
       this.paddle.x += paddleSpeed * dt;
     }
     this.paddle.x = Phaser.Math.Clamp(this.paddle.x, half, GAME_WIDTH - half);

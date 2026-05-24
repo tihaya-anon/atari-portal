@@ -348,24 +348,22 @@ export class PacmanScene extends BaseGameScene {
   }
 
   handleInput() {
-    const inv = this.controlInverted;
+    const invX = this.horizontalControlInverted;
+    const invY = this.verticalControlInverted;
     let newDir = null;
 
     if (this.cursors.left.isDown || this.wasd.left.isDown) {
-      newDir = inv ? DIRECTIONS.RIGHT : DIRECTIONS.LEFT;
+      newDir = invX ? DIRECTIONS.RIGHT : DIRECTIONS.LEFT;
     } else if (this.cursors.right.isDown || this.wasd.right.isDown) {
-      newDir = inv ? DIRECTIONS.LEFT : DIRECTIONS.RIGHT;
+      newDir = invX ? DIRECTIONS.LEFT : DIRECTIONS.RIGHT;
     } else if (this.cursors.up.isDown || this.wasd.up.isDown) {
-      newDir = inv ? DIRECTIONS.DOWN : DIRECTIONS.UP;
+      newDir = invY ? DIRECTIONS.DOWN : DIRECTIONS.UP;
     } else if (this.cursors.down.isDown || this.wasd.down.isDown) {
-      newDir = inv ? DIRECTIONS.UP : DIRECTIONS.DOWN;
+      newDir = invY ? DIRECTIONS.UP : DIRECTIONS.DOWN;
     }
 
     if (newDir) {
       this.pacman.nextDirection = newDir;
-      this.pacman.wantsToMove = true;
-    } else {
-      this.pacman.wantsToMove = false;
     }
   }
 
@@ -382,7 +380,7 @@ export class PacmanScene extends BaseGameScene {
         dirChanged = true;
       }
 
-      if ((pac.wantsToMove || dirChanged) && this.canMove(pac.gridCol, pac.gridRow, pac.direction)) {
+      if ((dirChanged || this.canMove(pac.gridCol, pac.gridRow, pac.direction)) && this.canMove(pac.gridCol, pac.gridRow, pac.direction)) {
         const nc = pac.gridCol + pac.direction.x;
         const nr = pac.gridRow + pac.direction.y;
         const target = cellToWorld(nc, nr);

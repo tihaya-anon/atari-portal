@@ -33,6 +33,11 @@ class GameManagerSingleton {
       comboTimer: 0,
       permanentUpgrades: this.loadPermanentUpgrades(),
     };
+    this.cheats = {
+      nextSceneKey: null,
+      nextMutationId: null,
+      nextModId: null,
+    };
     this.mutationSystem.clearMutation();
     this.modSystem.reset();
   }
@@ -186,25 +191,63 @@ class GameManagerSingleton {
     this.state.gamesCompleted.push(GAME_ORDER[this.state.currentGameIndex]);
     this.addCoins(COIN_CONFIG.PER_PORTAL);
 
+    let nextSceneKey = null;
     if (this.state.mode === 'story') {
-      this.state.currentGameIndex++;
+      nextSceneKey = GAME_ORDER[this.state.currentGameIndex + 1] || GAME_ORDER[GAME_ORDER.length - 1];
       this.state.difficulty += DIFFICULTY.INCREMENT;
     } else {
       const available = GAME_ORDER.filter(
         (_, i) => i !== this.state.currentGameIndex
       );
-      const next = available[Math.floor(Math.random() * available.length)];
-      this.state.currentGameIndex = GAME_ORDER.indexOf(next);
+      nextSceneKey = available[Math.floor(Math.random() * available.length)];
       this.state.difficulty += DIFFICULTY.INCREMENT * 0.5;
     }
 
+    if (this.cheats.nextSceneKey && GAME_ORDER.includes(this.cheats.nextSceneKey)) {
+      nextSceneKey = this.cheats.nextSceneKey;
+      this.cheats.nextSceneKey = null;
+    }
+
+    this.state.currentGameIndex = GAME_ORDER.indexOf(nextSceneKey);
+
     this.state.portalTokens++;
 
-    this.mutationSystem.rollMutation();
+    if (this.cheats.nextMutationId) {
+      const forcedMutation = this.mutationSystem.setMutationById(this.cheats.nextMutationId);
+      this.cheats.nextMutationId = null;
+      if (!forcedMutation) this.mutationSystem.rollMutation();
+    } else {
+      this.mutationSystem.rollMutation();
+    }
 
     this.achievementSystem.checkAutoAchievements(this.state);
 
     return this.currentSceneKey;
+  }
+
+  setCheatState(patch) {
+    this.state = {
+      ...this.state,
+      ...patch,
+    };
+  }
+
+  setNextSceneCheat(sceneKey) {
+    this.cheats.nextSceneKey = sceneKey || null;
+  }
+
+  setNextMutationCheat(mutationId) {
+    this.cheats.nextMutationId = mutationId || null;
+  }
+
+  setNextModCheat(modId) {
+    this.cheats.nextModId = modId || null;
+  }
+
+  consumeNextModCheat() {
+    const modId = this.cheats.nextModId;
+    this.cheats.nextModId = null;
+    return modId;
   }
 
   // -- Achievements --

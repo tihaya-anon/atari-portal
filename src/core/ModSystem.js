@@ -54,6 +54,10 @@ export class ModSystem {
     return null;
   }
 
+  getModById(id) {
+    return ALL_MODS.find(mod => mod.id === id) || null;
+  }
+
   hasMod(id) {
     return this.activeMods.some(m => m.id === id);
   }

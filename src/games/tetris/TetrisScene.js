@@ -136,7 +136,7 @@ export class TetrisScene extends BaseGameScene {
     this.input.keyboard.on('keydown-SPACE', () => this.hardDrop());
 
     this.events.on('powerup-collected', (def) => {
-      if (def.id === 'clear_rows') this.clearBottomRows(2);
+      if (def.id === 'clear_rows') this.deleteBottomRows(2);
     });
   }
 
@@ -188,9 +188,7 @@ export class TetrisScene extends BaseGameScene {
     this.dropTimer = 0;
 
     if (!this.isValid(this.currentPieceX, this.currentPieceY, shape)) {
-      this.gameOver = true;
-      this.lockPiece();
-      this.onPlayerDeath();
+      this.handleTopOut();
       return;
     }
 
@@ -356,33 +354,49 @@ export class TetrisScene extends BaseGameScene {
       this._showClearCallout('DOUBLE', COLORS.NEON_CYAN, centerX, centerY - 12, 20);
     }
 
-    this.flashRows(fullRows, count, () => {
-      for (const row of fullRows.sort((a, b) => b - a)) {
-        this.board.splice(row, 1);
-        this.boardColors.splice(row, 1);
-        this.board.unshift(new Array(COLS).fill(0));
-        this.boardColors.unshift(new Array(COLS).fill(0));
-      }
-      this.renderBoard();
+    for (const row of fullRows.sort((a, b) => b - a)) {
+      this.board.splice(row, 1);
+      this.boardColors.splice(row, 1);
+      this.board.unshift(new Array(COLS).fill(0));
+      this.boardColors.unshift(new Array(COLS).fill(0));
+    }
 
-      if (!this.portalTriggered) {
-        this.checkPortalCondition(count, fullRows);
-      }
-    });
+    this.renderBoard();
+
+    if (!this.portalTriggered) {
+      this.checkPortalCondition(count, fullRows);
+    }
+
+    this.flashRows(fullRows, count);
   }
 
-  clearBottomRows(count) {
+  deleteBottomRows(count) {
     for (let i = 0; i < count; i++) {
-      const row = ROWS - 1 - i;
-      if (row >= 0) {
-        this.board[row] = new Array(COLS).fill(0);
-        this.boardColors[row] = new Array(COLS).fill(0);
-      }
+      this.board.pop();
+      this.boardColors.pop();
+      this.board.unshift(new Array(COLS).fill(0));
+      this.boardColors.unshift(new Array(COLS).fill(0));
     }
     this.renderBoard();
   }
 
-  flashRows(rows, count, onComplete) {
+  handleTopOut() {
+    const alive = this.onPlayerDeath();
+    if (!alive) {
+      this.gameOver = true;
+      return;
+    }
+
+    this._showClearCallout('STACK OVERLOAD', COLORS.NEON_RED, GAME_WIDTH / 2, BOARD_Y + 48, 20);
+    this._spawnBoardFlash(COLORS.NEON_RED, 0.16, 260);
+    GlitchEffect.digitalNoise(this, 180);
+    this.shakeCamera(0.006, 220);
+    this.deleteBottomRows(6);
+    this.gameOver = false;
+    this.spawnPiece();
+  }
+
+  flashRows(rows, count, onComplete = null) {
     const flashBlocks = [];
     const flashBars = [];
     const tierColors = [COLORS.NEON_CYAN, COLORS.NEON_GREEN, COLORS.NEON_ORANGE, COLORS.NEON_MAGENTA];
@@ -429,7 +443,9 @@ export class TetrisScene extends BaseGameScene {
           });
         }
         flashBlocks.forEach(b => b.destroy());
-        this.time.delayedCall(200, () => onComplete());
+        if (onComplete) {
+          this.time.delayedCall(200, () => onComplete());
+        }
       },
     });
 
@@ -794,17 +810,17 @@ export class TetrisScene extends BaseGameScene {
   }
 
   updateDAS(time, delta) {
-    const inv = this.controlInverted;
-    const leftDown = inv
+    const invX = this.horizontalControlInverted;
+    const leftHeld = invX
       ? (this.cursors.right.isDown || this.keyD.isDown)
       : (this.cursors.left.isDown || this.keyA.isDown);
-    const rightDown = inv
+    const rightHeld = invX
       ? (this.cursors.left.isDown || this.keyA.isDown)
       : (this.cursors.right.isDown || this.keyD.isDown);
 
     let dir = 0;
-    if (leftDown && !rightDown) dir = -1;
-    else if (rightDown && !leftDown) dir = 1;
+    if (leftHeld && !rightHeld) dir = -1;
+    else if (rightHeld && !leftHeld) dir = 1;
 
     if (dir === 0) {
       this.dasDir = 0;
@@ -843,8 +859,8 @@ export class TetrisScene extends BaseGameScene {
 
     this.updateDAS(time, delta);
 
-    const inv = this.controlInverted;
-    this.softDropping = inv
+    const invY = this.verticalControlInverted;
+    this.softDropping = invY
       ? (this.cursors.up.isDown || this.keyW.isDown)
       : (this.cursors.down.isDown || this.keyS.isDown);
     const interval = this.softDropping ? Math.min(this.dropInterval, 50) : this.dropInterval;
