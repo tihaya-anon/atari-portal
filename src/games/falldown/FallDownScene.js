@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { BaseGameScene } from '../BaseGameScene.js';
 import { GAME_WIDTH, GAME_HEIGHT, COLORS } from '../../config.js';
 import { DemoDirector } from '../../core/DemoDirector.js';
+import { getFallDownDemoDirection } from '../../demo/sceneBots.js';
 import SFX from '../../core/SFXManager.js';
 import AudioReactive from '../../core/AudioReactiveSystem.js';
 import CyberSceneFX from '../../vfx/CyberSceneFX.js';
@@ -164,7 +165,7 @@ export class FallDownScene extends BaseGameScene {
     }
 
     const invX = this.horizontalControlInverted;
-    const demoDir = DemoDirector.enabled ? this.getDemoMoveDirection() : 0;
+    const demoDir = DemoDirector.enabled ? getFallDownDemoDirection(this) : 0;
     const isLeft = demoDir < 0 || this.keyA.isDown || this.cursors.left.isDown;
     const isRight = demoDir > 0 || this.keyD.isDown || this.cursors.right.isDown;
 
@@ -194,22 +195,6 @@ export class FallDownScene extends BaseGameScene {
     this.setPlayerPosition(this.player.x, this.player.y);
     this.tryEnterPortal(this.player.x, this.player.y);
     this.syncNeonActors(time);
-  }
-
-  getDemoMoveDirection() {
-    const nearbyOrbs = this.orbs.getChildren().filter(orb => orb.active && Math.abs(orb.y - this.player.y) < 180);
-    if (nearbyOrbs.length > 0) {
-      const orb = nearbyOrbs.reduce((best, item) => Math.abs(item.y - this.player.y) < Math.abs(best.y - this.player.y) ? item : best, nearbyOrbs[0]);
-      return Math.sign(orb.x - this.player.x);
-    }
-
-    const platforms = this.platforms.getChildren().filter(plat => plat.active && plat.y > this.player.y && plat.y - this.player.y < 170);
-    if (platforms.length > 0) {
-      const platform = platforms.reduce((best, item) => item.y < best.y ? item : best, platforms[0]);
-      return Math.sign(platform.x - this.player.x);
-    }
-
-    return Math.sign(GAME_WIDTH / 2 - this.player.x);
   }
 
   syncNeonActors(time) {

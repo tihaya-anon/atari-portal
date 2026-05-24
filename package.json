@@ -6,6 +6,7 @@
   "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite",
+    "demo": "vite --open /?demo=1",
     "build": "vite build",
     "preview": "vite preview",
     "make-icon": "node scripts/make-icon.cjs",

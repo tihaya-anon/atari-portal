@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT, COLORS } from '../../config.js';
 import { GameManager } from '../../core/GameManager.js';
 import { DemoDirector } from '../../core/DemoDirector.js';
+import { runTetrisDemo } from '../../demo/sceneBots.js';
 import { BaseGameScene } from '../BaseGameScene.js';
 import SFX from '../../core/SFXManager.js';
 import GlitchEffect from '../../vfx/GlitchEffect.js';
@@ -859,7 +860,7 @@ export class TetrisScene extends BaseGameScene {
     if (this.gameOver) return;
 
     if (DemoDirector.enabled) {
-      this.runDemoAI(time);
+      runTetrisDemo(this, time);
     }
     this.updateDAS(time, delta);
 
@@ -892,69 +893,6 @@ export class TetrisScene extends BaseGameScene {
         }
       }
     }
-  }
-
-  runDemoAI(time) {
-    if (!this.currentType) return;
-    if (!this._demoPlan || this._demoPlan.type !== this.currentType || this._demoPlan.rotation !== this.currentRotation) {
-      this._demoPlan = this.buildDemoPlan();
-    }
-    if (!this._demoPlan) return;
-
-    while (this.currentRotation !== this._demoPlan.rotation && this._demoPlan.rotateSteps > 0) {
-      this.rotatePiece();
-      this._demoPlan.rotateSteps--;
-    }
-
-    if (this.currentPieceX < this._demoPlan.targetX) {
-      this.movePiece(1);
-    } else if (this.currentPieceX > this._demoPlan.targetX) {
-      this.movePiece(-1);
-    } else if (time - (this._demoHardDropAt || 0) > 250) {
-      this._demoHardDropAt = time;
-      this.hardDrop();
-      this._demoPlan = null;
-    }
-  }
-
-  buildDemoPlan() {
-    const shape = this.getShape();
-    let best = { targetX: this.currentPieceX, rotation: this.currentRotation, rotateSteps: 0, score: Infinity };
-
-    for (let rot = 0; rot < 4; rot++) {
-      const testShape = this.getShape(this.currentType, rot);
-      const width = testShape[0].length;
-      for (let x = -2; x <= COLS - width + 2; x++) {
-        if (!this.isValid(x, this.currentPieceY, testShape)) continue;
-        let y = this.currentPieceY;
-        while (this.isValid(x, y + 1, testShape)) y++;
-        let score = y * 2;
-        for (let r = 0; r < testShape.length; r++) {
-          for (let c = 0; c < testShape[r].length; c++) {
-            if (!testShape[r][c]) continue;
-            const boardX = x + c;
-            const boardY = y + r;
-            if (boardX < 0 || boardX >= COLS || boardY < 0 || boardY >= ROWS) {
-              score += 1000;
-              continue;
-            }
-            if (boardY >= ROWS - 4) score -= 3;
-            if (boardX >= 3 && boardX <= 6) score -= 1;
-          }
-        }
-        if (score < best.score) {
-          best = {
-            targetX: x,
-            rotation: rot,
-            rotateSteps: (rot - this.currentRotation + 4) % 4,
-            type: this.currentType,
-            score,
-          };
-        }
-      }
-    }
-
-    return best;
   }
 
   shutdown() {

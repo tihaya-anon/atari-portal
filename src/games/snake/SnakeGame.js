@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { BaseGameScene } from '../BaseGameScene.js';
 import { GAME_WIDTH, GAME_HEIGHT, COLORS } from '../../config.js';
 import { DemoDirector } from '../../core/DemoDirector.js';
+import { getSnakeDemoDirection } from '../../demo/sceneBots.js';
 import SFX from '../../core/SFXManager.js';
 import AudioReactive from '../../core/AudioReactiveSystem.js';
 import CyberSceneFX from '../../vfx/CyberSceneFX.js';
@@ -141,7 +142,7 @@ export class SnakeGame extends BaseGameScene {
     let newDir = null;
 
     if (DemoDirector.enabled) {
-      newDir = this.getDemoDirection();
+      newDir = getSnakeDemoDirection(this, DIRS, COLS, ROWS);
     } else if (Phaser.Input.Keyboard.JustDown(this.cursors.left) || Phaser.Input.Keyboard.JustDown(this.wasd.left)) {
       newDir = invX ? DIRS.RIGHT : DIRS.LEFT;
     } else if (Phaser.Input.Keyboard.JustDown(this.cursors.right) || Phaser.Input.Keyboard.JustDown(this.wasd.right)) {
@@ -155,31 +156,6 @@ export class SnakeGame extends BaseGameScene {
     if (newDir && (newDir.x !== -this.direction.x || newDir.y !== -this.direction.y)) {
       this.nextDirection = newDir;
     }
-  }
-
-  getDemoDirection() {
-    const head = this.snake[0];
-    const target = this.food || { col: Math.floor(COLS / 2), row: Math.floor(ROWS / 2) };
-    const dirs = [DIRS.UP, DIRS.RIGHT, DIRS.DOWN, DIRS.LEFT];
-    let best = this.direction;
-    let bestScore = Infinity;
-
-    for (const dir of dirs) {
-      if (dir.x === -this.direction.x && dir.y === -this.direction.y) continue;
-      const nextCol = (head.col + dir.x + COLS) % COLS;
-      const nextRow = (head.row + dir.y + ROWS) % ROWS;
-      const hitSelf = this.snake.slice(0, -1).some(seg => seg.col === nextCol && seg.row === nextRow);
-      if (hitSelf) continue;
-
-      let score = Math.abs(target.col - nextCol) + Math.abs(target.row - nextRow);
-      if (this.sonicWaves.some(wave => wave.row === nextRow && this.time.now >= wave.warnUntil)) score += 50;
-      if (score < bestScore) {
-        bestScore = score;
-        best = dir;
-      }
-    }
-
-    return best;
   }
 
   moveSnake() {

@@ -32,10 +32,10 @@ export const DemoDirector = {
   autoSelectMod: enabled,
   autoRestart: enabled,
   route: route.length ? route : GAME_ORDER,
-  sceneDurationMs: Math.max(3000, toNumber(params.get('demoSceneMs'), 9000)),
-  menuDelayMs: Math.max(500, toNumber(params.get('demoMenuMs'), 1600)),
-  modSelectDelayMs: Math.max(300, toNumber(params.get('demoModMs'), 1200)),
-  victoryDelayMs: Math.max(1500, toNumber(params.get('demoVictoryMs'), 4000)),
+  sceneDurationMs: Math.max(5000, toNumber(params.get('demoSceneMs'), 12500)),
+  menuDelayMs: Math.max(800, toNumber(params.get('demoMenuMs'), 2200)),
+  modSelectDelayMs: Math.max(500, toNumber(params.get('demoModMs'), 1700)),
+  victoryDelayMs: Math.max(2200, toNumber(params.get('demoVictoryMs'), 5200)),
   currentIndex: 0,
 
   reset() {

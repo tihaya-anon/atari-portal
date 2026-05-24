@@ -16,6 +16,12 @@ npm run dev
 http://localhost:3000/?demo=1
 ```
 
+更直接的方式：
+
+```bash
+npm run demo
+```
+
 可选参数：
 
 - `demoSceneMs=9000`：每个关卡停留时长，单位毫秒

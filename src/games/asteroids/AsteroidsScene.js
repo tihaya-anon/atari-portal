@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT, COLORS } from '../../config.js';
 import { GameManager } from '../../core/GameManager.js';
 import { DemoDirector } from '../../core/DemoDirector.js';
+import { getAsteroidsDemo } from '../../demo/sceneBots.js';
 import { BaseGameScene } from '../BaseGameScene.js';
 import SFX from '../../core/SFXManager.js';
 import GlitchEffect from '../../vfx/GlitchEffect.js';
@@ -285,9 +286,10 @@ export class AsteroidsScene extends BaseGameScene {
     let right;
     let thrust;
     let brake = false;
+    let shouldFire = false;
 
     if (DemoDirector.enabled) {
-      ({ left, right, thrust, brake } = this.getDemoShipControls());
+      ({ left, right, thrust, brake, shouldFire } = getAsteroidsDemo(this));
     } else {
       const invX = this.horizontalControlInverted;
       left = invX ? (this.cursors.right.isDown || this.keyD.isDown) : (this.cursors.left.isDown || this.keyA.isDown);
@@ -335,56 +337,9 @@ export class AsteroidsScene extends BaseGameScene {
       this.shipGlow.setVisible(this.ship.visible);
     }
 
-    if (DemoDirector.enabled && this.shouldDemoShoot()) {
+    if (DemoDirector.enabled && shouldFire) {
       this.fireBullet();
     }
-  }
-
-  getDemoShipControls() {
-    const target = this.getDemoTarget();
-    if (!target) {
-      return { left: false, right: false, thrust: true, brake: false };
-    }
-
-    const desiredAngle = Phaser.Math.Angle.Between(this.ship.x, this.ship.y, target.x, target.y);
-    const diff = Phaser.Math.Angle.Wrap(desiredAngle - this.ship.rotation);
-    const speed = Math.hypot(this.shipVx, this.shipVy);
-
-    return {
-      left: diff < -0.14,
-      right: diff > 0.14,
-      thrust: Math.abs(diff) < 0.75 && speed < 220,
-      brake: this.powerUps.hasEffect('brake') && speed > 260 && Math.abs(diff) > 2.1,
-    };
-  }
-
-  getDemoTarget() {
-    const liveAsteroids = this.asteroids?.filter?.(asteroid => asteroid?.active) || [];
-    const liveUfo = this.ufoSprite?.active ? this.ufoSprite : null;
-
-    let target = null;
-    let bestDist = Infinity;
-    for (const obj of [...liveAsteroids, liveUfo].filter(Boolean)) {
-      const dist = Phaser.Math.Distance.Between(this.ship.x, this.ship.y, obj.x, obj.y);
-      if (dist < bestDist) {
-        bestDist = dist;
-        target = obj;
-      }
-    }
-    return target;
-  }
-
-  shouldDemoShoot() {
-    const target = this.getDemoTarget();
-    if (!target) return false;
-    if (this.time.now - (this._demoLastFire || 0) < 180) return false;
-
-    const desiredAngle = Phaser.Math.Angle.Between(this.ship.x, this.ship.y, target.x, target.y);
-    const diff = Math.abs(Phaser.Math.Angle.Wrap(desiredAngle - this.ship.rotation));
-    if (diff > 0.24) return false;
-
-    this._demoLastFire = this.time.now;
-    return true;
   }
 
   showThrustFlicker() {

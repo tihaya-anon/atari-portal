@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT, COLORS } from '../../config.js';
 import { GameManager } from '../../core/GameManager.js';
 import { DemoDirector } from '../../core/DemoDirector.js';
+import { getSpaceInvadersDemo } from '../../demo/sceneBots.js';
 import { BaseGameScene } from '../BaseGameScene.js';
 import SFX from '../../core/SFXManager.js';
 import GlitchEffect from '../../vfx/GlitchEffect.js';
@@ -244,9 +245,10 @@ export class SpaceInvadersScene extends BaseGameScene {
     let vy = 0;
     const minY = GAME_HEIGHT * 0.5;
     const maxY = GAME_HEIGHT - 16;
+    let wantsFire = false;
 
     if (DemoDirector.enabled) {
-      ({ vx, vy } = this.getDemoMoveVector(minY, maxY));
+      ({ vx, vy, shouldFire: wantsFire } = getSpaceInvadersDemo(this, minY, maxY));
     } else {
       const invX = this.horizontalControlInverted;
       const invY = this.verticalControlInverted;
@@ -260,50 +262,10 @@ export class SpaceInvadersScene extends BaseGameScene {
     this.player.x = Phaser.Math.Clamp(this.player.x + vx * dt, 16, GAME_WIDTH - 16);
     this.player.y = Phaser.Math.Clamp(this.player.y + vy * dt, minY, maxY);
 
-    const wantsFire = DemoDirector.enabled ? this.shouldDemoFire() : Phaser.Input.Keyboard.JustDown(this.fireKey);
+    wantsFire = DemoDirector.enabled ? wantsFire : Phaser.Input.Keyboard.JustDown(this.fireKey);
     if (wantsFire && this.bullets.getLength() === 0) {
       this.fireBullet();
     }
-  }
-
-  getDemoMoveVector(minY, maxY) {
-    let targetX = this.player.x;
-    let targetY = PLAYER_Y - 6;
-
-    const liveInvaders = this.invaders.getChildren().filter(inv => inv.active && inv.getData('alive'));
-    if (liveInvaders.length > 0) {
-      const frontInvader = liveInvaders.reduce((best, inv) => (!best || inv.y > best.y ? inv : best), null);
-      if (frontInvader) targetX = frontInvader.x;
-    }
-
-    let danger = null;
-    this.bombs.getChildren().forEach((bomb) => {
-      if (!bomb?.active) return;
-      if (bomb.y < this.player.y && Math.abs(bomb.x - this.player.x) < 70) {
-        if (!danger || bomb.y > danger.y) danger = bomb;
-      }
-    });
-
-    if (danger) {
-      targetX += danger.x < this.player.x ? 120 : -120;
-      targetY = Phaser.Math.Clamp(this.player.y + 40, minY, maxY);
-    } else {
-      targetY = liveInvaders.length < 12 ? minY + 18 : PLAYER_Y - 10;
-    }
-
-    const dx = Phaser.Math.Clamp(targetX - this.player.x, -1, 1);
-    const dy = Phaser.Math.Clamp(targetY - this.player.y, -1, 1);
-    return { vx: dx * PLAYER_SPEED, vy: dy * PLAYER_SPEED * 0.75 };
-  }
-
-  shouldDemoFire() {
-    const liveInvaders = this.invaders.getChildren().filter(inv => inv.active && inv.getData('alive'));
-    if (liveInvaders.length === 0) return this.time.now - (this._demoLastFire || 0) > 350;
-    const aligned = liveInvaders.some(inv => Math.abs(inv.x - this.player.x) < 26 && inv.y < this.player.y);
-    if (!aligned) return false;
-    if (this.time.now - (this._demoLastFire || 0) < 220) return false;
-    this._demoLastFire = this.time.now;
-    return true;
   }
 
   fireBullet() {
